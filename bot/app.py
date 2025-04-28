@@ -5,63 +5,57 @@ from fastapi.staticfiles import StaticFiles
 import wikipedia
 import sympy
 import datetime
+import re
 
-# Configurações básicas
 app = FastAPI()
-templates = Jinja2Templates(directory="templates")
-app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Função para gerar resposta manual quando Wikipedia não encontrar
-def gerar_resposta_manual(pergunta):
+# Montar pastas
+app.mount("/static", StaticFiles(directory="static"), name="static")
+templates = Jinja2Templates(directory="templates")
+
+# Histórico de pesquisa
+history = []
+
+# Função de consulta inteligente
+def obter_resposta(pergunta):
     pergunta = pergunta.lower()
 
-    if "planetas do sistema solar" in pergunta:
-        return "Os planetas do sistema solar são: Mercúrio, Vênus, Terra, Marte, Júpiter, Saturno, Urano e Netuno."
+    # Resolver expressões matemáticas
+    expressao = re.findall(r"[-+*/().\d\s]+", pergunta)
+    if expressao:
+        try:
+            resultado = sympy.sympify("".join(expressao)).evalf()
+            return f"O resultado é: {resultado}"
+        except:
+            pass
 
-    if "copa do mundo" in pergunta:
-        return "A próxima Copa do Mundo será em 2026, sediada pelos Estados Unidos, Canadá e México."
+    # Verificar datas importantes
+    eventos = {
+        "copa do mundo": "A próxima Copa do Mundo será em 2026.",
+        "olimpíadas": "As próximas Olimpíadas serão em Paris em 2024.",
+        "natal": "O Natal é comemorado no dia 25 de dezembro."
+    }
+    for evento, resposta in eventos.items():
+        if evento in pergunta:
+            return resposta
 
-    if "hoje" in pergunta and "data" in pergunta:
-        return f"A data de hoje é {datetime.datetime.now().strftime('%d/%m/%Y')}."
+    # Consulta no Wikipedia
+    try:
+        wikipedia.set_lang("pt")
+        resultado = wikipedia.summary(pergunta, sentences=2)
+        return resultado
+    except wikipedia.exceptions.DisambiguationError as e:
+        return f"Seja mais específico: {e.options}"
+    except wikipedia.exceptions.PageError:
+        return "Desculpe, não encontrei uma resposta específica. Mas estou aprendendo!"
 
-    if "que dia é hoje" in pergunta:
-        return f"Hoje é {datetime.datetime.now().strftime('%d/%m/%Y')}."
-
-    if "qual é o ano" in pergunta:
-        return f"O ano atual é {datetime.datetime.now().year}."
-
-    # Resposta genérica
-    return "Desculpe, não encontrei uma resposta precisa, mas estou sempre aprendendo!"
-
+# 🛠️ Aqui corrigimos: Criar a rota principal (/) para o site carregar!
 @app.get("/", response_class=HTMLResponse)
-async def home(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "resposta": None, "historico": [], "tema": "light-mode"})
+async def read_root(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request, "history": history})
 
 @app.post("/perguntar", response_class=HTMLResponse)
-async def perguntar(request: Request, pergunta: str = Form(...), tema: str = Form('light-mode')):
-    pergunta_original = pergunta
-    resposta = ""
-    historico = []
-
-    # Primeiro tenta resolver como operação matemática
-    try:
-        resultado = sympy.sympify(pergunta)
-        resposta = f"O resultado é: {resultado}"
-    except:
-        # Se não for conta, tenta Wikipedia
-        try:
-            wikipedia.set_lang("pt")
-            resposta = wikipedia.summary(pergunta, sentences=2)
-        except wikipedia.exceptions.DisambiguationError as e:
-            try:
-                resposta = wikipedia.summary(e.options[0], sentences=2)
-            except:
-                resposta = gerar_resposta_manual(pergunta)
-        except wikipedia.exceptions.PageError:
-            resposta = gerar_resposta_manual(pergunta)
-        except:
-            resposta = gerar_resposta_manual(pergunta)
-
-    historico.append((pergunta_original, resposta))
-
-    return templates.TemplateResponse("index.html", {"request": request, "pergunta": pergunta_original, "resposta": resposta, "historico": historico, "tema": tema})
+async def perguntar(request: Request, pergunta: str = Form(...)):
+    resposta = obter_resposta(pergunta)
+    history.append({"pergunta": pergunta, "resposta": resposta})
+    return templates.TemplateResponse("index.html", {"request": request, "resposta": resposta, "history": history})
