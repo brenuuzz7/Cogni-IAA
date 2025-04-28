@@ -59,4 +59,5 @@ def gerar_resposta(pergunta):
 
     # Respostas padrões
     return "Desculpe, não encontrei uma resposta precisa para isso."
+    # Atualização manual para forçar push
 
