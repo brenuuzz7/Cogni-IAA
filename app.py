@@ -10,7 +10,7 @@ import re
 app = FastAPI()
 
 # Corrigido: considerar que estamos dentro da pasta 'bot'
-app.mount("/static", StaticFiles(directory="bot/static"), name="static")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="bot/templates")
 
 # Histórico de perguntas
