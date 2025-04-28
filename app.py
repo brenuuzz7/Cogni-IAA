@@ -1,63 +1,44 @@
 from fastapi import FastAPI, Request, Form
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
+from fastapi.responses import RedirectResponse
 from fastapi.templating import Jinja2Templates
-import wikipedia
-import sympy
-import datetime
-import re
+from fastapi.staticfiles import StaticFiles
+import random
 
 app = FastAPI()
 
-# Corrigido: considerar que estamos dentro da pasta 'bot'
-app.mount("/static", StaticFiles(directory="static"), name="static")
 templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
-# Histórico de perguntas
+# Histórico das mensagens
 historico = []
 
-# Definir idioma do Wikipedia
-wikipedia.set_lang('pt')
+# Função para gerar respostas emocionais
+def gerar_resposta(pergunta):
+    respostas_positivas = [
+        "Entendo como você se sente. 💬",
+        "Estou aqui para te ouvir, conte comigo! 🤗",
+        "Pode falar, estou te acompanhando. ✨",
+        "Se precisar desabafar, estou aqui. 💖",
+        "Você é mais forte do que imagina. 🌟"
+    ]
+    respostas_gerais = [
+        "Que interessante! Me fale mais sobre isso. 😊",
+        "E como isso faz você se sentir?",
+        "Estou curioso para saber mais.",
+        "Isso parece importante para você."
+    ]
+    respostas = respostas_positivas + respostas_gerais
+    return random.choice(respostas)
 
-@app.get("/", response_class=HTMLResponse)
+@app.get("/")
 async def read_root(request: Request):
     return templates.TemplateResponse("index.html", {"request": request, "historico": historico})
 
-@app.post("/perguntar", response_class=HTMLResponse)
-async def perguntar(request: Request, pergunta: str = Form(...)):
-    resposta = gerar_resposta(pergunta)
-    historico.append({"pergunta": pergunta, "resposta": resposta})
-    return templates.TemplateResponse("index.html", {"request": request, "resposta": resposta, "historico": historico})
-
-def gerar_resposta(pergunta):
-    pergunta_lower = pergunta.lower()
-
-    # Se for uma operação matemática
-    if any(op in pergunta_lower for op in ["+", "-", "*", "/", "x", "dividido", "multiplicado", "somado", "subtraído"]):
-        try:
-            expressao = pergunta_lower
-            expressao = expressao.replace('x', '*').replace('dividido por', '/').replace('multiplicado por', '*').replace('mais', '+').replace('menos', '-')
-            resultado = sympy.sympify(expressao)
-            return f"O resultado é: {resultado}"
-        except:
-            return "Não consegui entender sua operação matemática."
-
-    # Datas de eventos famosos
-    if "copa do mundo" in pergunta_lower:
-        return "A próxima Copa do Mundo de Futebol Masculino será em 2026, sediada nos EUA, Canadá e México."
-    if "olimpíadas" in pergunta_lower:
-        return "As próximas Olimpíadas de Verão serão em Paris, em 2024."
-
-    # Consultar Wikipedia
-    try:
-        resumo = wikipedia.summary(pergunta, sentences=2)
-        return resumo
-    except wikipedia.exceptions.DisambiguationError as e:
-        return f"Seja mais específico. Você quis dizer: {', '.join(e.options[:5])}?"
-    except wikipedia.exceptions.PageError:
-        pass
-
-    # Respostas padrões
-    return "Desculpe, não encontrei uma resposta precisa para isso."
-    # Atualização manual para forçar push
-
+@app.post("/send")
+async def send_message(request: Request, pergunta: str = Form(...)):
+    pergunta = pergunta.strip()
+    if pergunta:
+        historico.append({"texto": pergunta, "tipo": "usuario"})
+        resposta = gerar_resposta(pergunta)
+        historico.append({"texto": resposta, "tipo": "bot"})
+    return RedirectResponse("/", status_code=303)

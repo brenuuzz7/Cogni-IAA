@@ -2,61 +2,29 @@
 <html lang="pt-BR">
 <head>
     <meta charset="UTF-8">
-    <title>Cogni IA</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Conversa Amiga</title>
     <link rel="stylesheet" href="/static/style.css">
 </head>
-<body class="{{ tema|default('light-mode') }}">
-    <header>
-        <h1>Cogni IA</h1>
-        <div class="botoes">
-            <button id="modo-btn" onclick="alternarModo()">🌗 Tema</button>
-            <button id="historico-btn" onclick="mostrarHistorico()">📜 Histórico</button>
+<body>
+    <div class="chat-container">
+        <header>
+            <h1>Conversa Amiga</h1>
+            <p>Sua assistente emocional</p>
+        </header>
+        
+        <div class="chat-box" id="chat-box">
+            {% for msg in historico %}
+                <div class="message {{ msg['tipo'] }}">
+                    {{ msg['texto'] }}
+                </div>
+            {% endfor %}
         </div>
-    </header>
 
-    <main>
-        <form action="/perguntar" method="post" onsubmit="salvarTema()">
-            <input type="text" name="pergunta" placeholder="Digite sua pergunta..." required>
-            <button type="submit">Perguntar</button>
-            <input type="hidden" id="tema" name="tema" value="{{ tema|default('light-mode') }}">
+        <form class="input-area" method="post" action="/send">
+            <input type="text" name="pergunta" placeholder="Digite sua mensagem..." autocomplete="off" required>
+            <button type="submit">Enviar</button>
         </form>
-
-        <div class="resposta">
-            {% if resposta %}
-                <h2>Pergunta:</h2> <p>{{ pergunta }}</p>
-                <h2>Resposta:</h2> <p>{{ resposta }}</p>
-            {% endif %}
-        </div>
-
-        <div id="historico" style="display:none;">
-            <h2>Histórico:</h2>
-            <ul>
-                {% for pergunta, resposta in historico %}
-                    <li><strong>{{ pergunta }}</strong>: {{ resposta }}</li>
-                {% endfor %}
-            </ul>
-        </div>
-    </main>
-
-    <script>
-        function alternarModo() {
-            document.body.classList.toggle("dark-mode");
-            document.body.classList.toggle("light-mode");
-            document.getElementById('tema').value = document.body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode';
-        }
-
-        function mostrarHistorico() {
-            var historicoDiv = document.getElementById("historico");
-            if (historicoDiv.style.display === "none") {
-                historicoDiv.style.display = "block";
-            } else {
-                historicoDiv.style.display = "none";
-            }
-        }
-
-        function salvarTema() {
-            document.getElementById('tema').value = document.body.classList.contains('dark-mode') ? 'dark-mode' : 'light-mode';
-        }
-    </script>
+    </div>
 </body>
 </html>
