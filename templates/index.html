@@ -4,45 +4,66 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Cogni IA</title>
-    <link rel="stylesheet" href="/static/styles.css">
-    <link rel="icon" href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..." type="image/png">
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" type="image/png" href="/static/cogni-icon.png">
 </head>
 <body>
-    <header>
-        <img src="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADIA..." alt="Cogni IA" class="logo">
-        <h1>Cogni IA</h1>
-        <p>Inteligência Artificial para todas as suas perguntas</p>
-    </header>
+    <div class="container">
+        <header>
+            <img src="/static/cogni-icon.png" alt="Cogni IA" class="logo">
+            <h1>Cogni IA</h1>
+            <p>Uma inteligência artificial para tudo: respostas, ajuda, conversa humana e mais.</p>
+        </header>
 
-    <main>
-        <div id="chat-container">
-            {% for msg in historico %}
-                <div class="message {{ 'user' if msg.role == 'user' else 'bot' }}">
-                    <div class="content">{{ msg.content }}</div>
-                </div>
-            {% endfor %}
+        <div class="chat-container" id="chat-container">
+            <!-- Mensagens vão aparecer aqui -->
         </div>
 
-        <form action="/enviar" method="post" id="form">
-            <input type="text" name="pergunta" placeholder="Digite sua mensagem..." required autocomplete="off">
-            <button type="submit">Enviar</button>
+        <form id="formulario" autocomplete="off">
+            <div class="input-area">
+                <input type="text" id="pergunta" placeholder="Digite sua pergunta..." required>
+                <button type="submit">Enviar</button>
+            </div>
         </form>
-    </main>
+
+        <footer>
+            <p>Desenvolvido para você - Cogni IA 🧠</p>
+        </footer>
+    </div>
 
     <script>
-        const lastBotMessage = document.querySelector('.bot:last-child .content');
-        if (lastBotMessage) {
-            const text = lastBotMessage.innerText;
-            lastBotMessage.innerText = "";
-            let i = 0;
-            const typingEffect = setInterval(() => {
-                if (i < text.length) {
-                    lastBotMessage.innerText += text.charAt(i);
-                    i++;
-                } else {
-                    clearInterval(typingEffect);
-                }
-            }, 20);
+        const form = document.getElementById('formulario');
+        const perguntaInput = document.getElementById('pergunta');
+        const chatContainer = document.getElementById('chat-container');
+
+        form.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const pergunta = perguntaInput.value.trim();
+            if (pergunta === '') return;
+
+            adicionarMensagem('user', pergunta);
+            perguntaInput.value = '';
+
+            const resposta = await enviarPergunta(pergunta);
+            adicionarMensagem('bot', resposta);
+        });
+
+        function adicionarMensagem(remetente, mensagem) {
+            const div = document.createElement('div');
+            div.classList.add('mensagem', remetente);
+            div.textContent = mensagem;
+            chatContainer.appendChild(div);
+            chatContainer.scrollTop = chatContainer.scrollHeight;
+        }
+
+        async function enviarPergunta(pergunta) {
+            const resposta = await fetch('/enviar', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ pergunta })
+            });
+            const dados = await resposta.json();
+            return dados.resposta;
         }
     </script>
 </body>

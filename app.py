@@ -1,40 +1,36 @@
-from fastapi import FastAPI, Request, Form
+from fastapi import FastAPI, Request
 from fastapi.responses import HTMLResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
-from dotenv import load_dotenv
 import openai
 import os
 
-load_dotenv()
-
-openai.api_key = os.getenv("OPENAI_API_KEY")
-
 app = FastAPI()
 
-app.mount("/static", StaticFiles(directory="static"), name="static")
-templates = Jinja2Templates(directory="templates")
+# Configurações
+openai_client = openai.OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-historico = [
-    {"role": "system", "content": "Você é a Cogni IA, uma inteligência artificial moderna e amigável. Você responde qualquer tipo de pergunta (acadêmica, emocional, informativa, tecnológica, etc.) de forma humana, educada e clara."}
-]
+# Pastas
+templates = Jinja2Templates(directory="templates")
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 @app.get("/", response_class=HTMLResponse)
-async def read_root(request: Request):
-    return templates.TemplateResponse("index.html", {"request": request, "historico": historico[1:]})
+async def home(request: Request):
+    return templates.TemplateResponse("index.html", {"request": request})
 
 @app.post("/enviar", response_class=HTMLResponse)
-async def enviar(request: Request, pergunta: str = Form(...)):
-    historico.append({"role": "user", "content": pergunta})
+async def enviar(request: Request):
+    form = await request.form()
+    mensagem = form.get("mensagem")
 
-    resposta = openai.ChatCompletion.create(
-        model="gpt-4",
-        messages=historico,
-        temperature=0.7,
-        max_tokens=500,
+    resposta = openai_client.chat.completions.create(
+        model="gpt-3.5-turbo",
+        messages=[
+            {"role": "system", "content": "Você é a Cogni IA, uma inteligência artificial amigável, humana, capaz de conversar e responder sobre qualquer assunto."},
+            {"role": "user", "content": mensagem},
+        ]
     )
 
-    mensagem = resposta.choices[0].message.content
-    historico.append({"role": "assistant", "content": mensagem})
+    resposta_texto = resposta.choices[0].message.content
 
-    return templates.TemplateResponse("index.html", {"request": request, "historico": historico[1:]})
+    return templates.TemplateResponse("index.html", {"request": request, "mensagem_usuario": mensagem, "resposta": resposta_texto})
