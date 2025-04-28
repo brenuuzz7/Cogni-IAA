@@ -1,0 +1,4 @@
+1. Dê dois cliques em instalar_site.bat para instalar tudo.
+2. Depois, dê dois cliques em rodar_site.bat para rodar o site.
+3. O navegador vai abrir automaticamente no endereço http://127.0.0.1:8000/
+4. Pergunte o que quiser no site!
